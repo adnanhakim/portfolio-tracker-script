@@ -164,6 +164,11 @@ def calculate_asset_value(
     # Calculate absolute returns
     absolute_returns: Decimal = (current_value - invested_value) / invested_value
 
-    print(
-        f"{dates.to_month_year(date)}\t{round(invested_value)}\t{round(current_value)}\t{round(xirr, 4)}\t{round(absolute_returns, 4)}\t{round(realized_profit)}\t{round(equity_value / current_value, 4)}\t{round(debt_value / current_value, 4)}\t{round(cash_value / current_value, 4)}"
-    )
+    if equity_only:
+        print(
+            f"{dates.to_month_year(date)}\t{round(invested_value)}\t{round(current_value)}\t{round(xirr, 4)}\t{round(absolute_returns, 4)}\t{round(realized_profit)}"
+        )
+    else:
+        print(
+            f"{dates.to_month_year(date)}\t{round(invested_value)}\t{round(current_value)}\t{round(xirr, 4)}\t{round(absolute_returns, 4)}\t{round(realized_profit)}\t{round(equity_value / current_value, 4)}\t{round(debt_value / current_value, 4)}\t{round(cash_value / current_value, 4)}"
+        )
