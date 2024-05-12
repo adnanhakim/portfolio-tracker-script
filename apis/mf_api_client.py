@@ -1,0 +1,73 @@
+"""
+api.mf_api_client
+~~~~~~~~~~~~~~
+
+This module contains MFApiClient class.
+
+"""
+
+import datetime
+from decimal import Decimal
+from typing import Self
+
+from requests import Response, get
+
+from models.mf_price import MFPrice
+from utils import files
+
+
+class MFApiClient:
+    """This Api Client class is used to fetch historical pricing data for a Mutual Fund"""
+
+    _BASE_URL = "https://api.mfapi.in/mf/"
+
+    _FOLDER_NAME = "mf_api_response"
+
+    def __init__(self: Self, override_cache=False) -> None:
+        if override_cache:
+            files.delete_files_in_folder(self._FOLDER_NAME)
+
+    def fetch_nav_prices(self: Self, amfi_code: str):
+        return self._fetch_nav_prices_from_cache(amfi_code)
+
+    def _fetch_nav_prices_from_api(self: Self, amfi_code: str) -> list[MFPrice] | None:
+        url: str = self._BASE_URL + amfi_code
+
+        response: Response = get(url, timeout=10)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            pricing_data_json = response.json()["data"]
+
+            files.save_file_as_json(self._FOLDER_NAME, amfi_code, pricing_data_json)
+
+            pricing_data: list[MFPrice] = [
+                MFPrice.from_dict(d) for d in pricing_data_json
+            ]
+
+            return pricing_data
+        else:
+            return None
+
+    def _fetch_nav_prices_from_cache(
+        self: Self, amfi_code: str
+    ) -> list[MFPrice] | None:
+        json_data: list[dict] | None = files.read_file_as_json(
+            self._FOLDER_NAME, amfi_code
+        )
+
+        if json_data is None:
+            return self._fetch_nav_prices_from_api(amfi_code)
+
+        pricing_data: list[MFPrice] = [MFPrice.from_dict(d) for d in json_data]
+
+        return pricing_data
+
+    def get_nav_price(self: Self, amfi_code: str, date: datetime) -> Decimal:
+        pricing_data: list[MFPrice] = self.fetch_nav_prices(amfi_code)
+
+        for data in pricing_data:
+            if data.date > date:
+                continue
+
+            return Decimal(data.nav)
