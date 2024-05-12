@@ -1,7 +1,13 @@
-from ast import Eq
+"""
+services.mf_performance_service
+~~~~~~~~~~~~~~
+
+This module contains a service methods which performs analysis.
+
+"""
+
 from datetime import datetime
 from decimal import Decimal
-from math import e
 
 from xirr.math import listsXirr
 
@@ -28,7 +34,9 @@ def calculate_monthly_asset_value(
         f"\nExecuting from {from_datestring.capitalize()} to {to_datestring.capitalize()}"
     )
 
-    print("\n<---------------- Monthly Asset Value ---------------->")
+    print(
+        "\n<--------------------------- Monthly Asset Value --------------------------->"
+    )
 
     temp_date = from_date
     while temp_date <= to_date:
@@ -38,7 +46,9 @@ def calculate_monthly_asset_value(
         temp_date: datetime = dates.add_month(temp_date)
 
     if is_benchmark and len(benchmark_txn_list) != 0:
-        print("\n<-------------- Monthly Benchmark Value -------------->")
+        print(
+            "\n<------------------------- Monthly Benchmark Value ------------------------->"
+        )
 
         temp_date = from_date
         while temp_date <= to_date:
@@ -128,10 +138,25 @@ def calculate_asset_value(
             cashflow_values.append(float(sell_value))
             cashflow_dates.append(txn.sell_date)
 
+    # Calculate equity/debt/cash split
+    equity_value: Decimal = Decimal(0)
+    debt_value: Decimal = Decimal(0)
+    cash_value: Decimal = Decimal(0)
+
     # Calculate current value
     current_value = Decimal(0)
     for fund, units in fund_units_map.items():
-        current_value += units * fund_price_map[fund]
+        asset: str = mf_properties[fund].asset
+        value: Decimal = units * fund_price_map[fund]
+
+        if asset == "Equity" or asset == "ELSS":
+            equity_value += value
+        elif asset == "Debt":
+            debt_value += value
+        else:
+            cash_value += value
+
+        current_value += value
 
     # Calculate XIRR
     xirr: float | None = listsXirr(cashflow_dates, cashflow_values)
@@ -140,5 +165,5 @@ def calculate_asset_value(
     absolute_returns: Decimal = (current_value - invested_value) / invested_value
 
     print(
-        f"{dates.to_month_year(date)}\t{round(invested_value)}\t{round(current_value)}\t{round(xirr, 4)}\t{round(absolute_returns, 4)}\t{round(realized_profit)}"
+        f"{dates.to_month_year(date)}\t{round(invested_value)}\t{round(current_value)}\t{round(xirr, 4)}\t{round(absolute_returns, 4)}\t{round(realized_profit)}\t{round(equity_value / current_value, 4)}\t{round(debt_value / current_value, 4)}\t{round(cash_value / current_value, 4)}"
     )
