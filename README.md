@@ -42,7 +42,7 @@ Update the sheet name and column numbers (0 indexed) in `services/mf_data_servic
 1. Fund Name - Name of the fund (can be any name, but has to be the same name in Sheet 2).
 2. Buy/Sell - Indicator to denote if the transaction has been fully sold or yet to be sold.
     Suppose you have 2 units of a fund, but only sell 1 unit, create 2 rows in transaction sheet, one with 1 unit with SELL and the other with 1 unit as BUY.
-3. Buy Date / Sell Date - Dates with dd-MM-yyyy format.
+3. Buy Date / Sell Date - Dates with `dd-MM-yyyy` format.
 4. Buy Price / Sell Price - Effective price (post exit load, if any).
 
 
@@ -56,11 +56,11 @@ Update the sheet name and column numbers (0 indexed) in `services/mf_properties_
 |-------------------------|-----------|--------|-----------|---------|
 | UTI Nifty 50 Index Fund | 120716    | Equity | Core      | India   |
 
-1. Fund Name (Mandatory) - Name of the fund (can be any name, but has to be the same name in Sheet 1).
-2. AMFI Code (Mandatory) - Can be found [here](https://www.mfapi.in/) 
-3. Asset (Mandatory) - Types can be `Equity`, `ELSS`, `Debt` or `Arbitrage`.
-4. Portfolio (Optional) - Which portfolio does the fund belong to (New features to be added soon).
-5. Country (Optional) - New features to be added soon.
+1. Fund Name [Mandatory] - Name of the fund (can be any name, but has to be the same name in Sheet 1).
+2. AMFI Code [Mandatory] - Can be found [here](https://www.mfapi.in/) 
+3. Asset [Mandatory] - Types can be `Equity`, `ELSS`, `Debt` or `Arbitrage`.
+4. Portfolio [Optional] - Which portfolio does the fund belong to (New features to be added soon).
+5. Country [Optional] - New features to be added soon.
 
 ## Installation
 
