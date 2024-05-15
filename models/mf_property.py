@@ -75,3 +75,7 @@ class MFProperty:
             asset=data["asset"],
             country=data["country"],
         )
+
+    def __str__(self):
+        attrs: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        return "{" + attrs + "}"

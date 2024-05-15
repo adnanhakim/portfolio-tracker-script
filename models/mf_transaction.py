@@ -124,3 +124,7 @@ class MFTransaction:
             sell_date=data["sell_date"],
             sell_price=data["sell_price"],
         )
+
+    def __str__(self):
+        attrs: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        return "{" + attrs + "}"

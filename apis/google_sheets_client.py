@@ -11,8 +11,10 @@ import sys
 from typing import Self
 
 from dotenv import load_dotenv
+from google.auth.exceptions import RefreshError
 from gspread import authorize
 from gspread.client import Client
+from gspread.exceptions import APIError, SpreadsheetNotFound
 from gspread.spreadsheet import Spreadsheet
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -55,4 +57,17 @@ class GoogleSheetsClient:
 
     def get_sheet(self: Self) -> Spreadsheet:
         """Returns the Spreadsheet object from Google Sheets"""
-        return self._client.open_by_key(self._SHEET_ID)
+        try:
+            return self._client.open_by_key(self._SHEET_ID)
+        except SpreadsheetNotFound as e:
+            print("No Spreadsheet found with ID ->", self._SHEET_ID, e)
+            sys.exit(1)
+        except APIError as e:
+            print("Error connecting to Google Sheets", e)
+            sys.exit(1)
+        except RefreshError as e:
+            print("Invalid credentials", e)
+            sys.exit(1)
+        except PermissionError as e:
+            print("Sheet does not have read permissions", e)
+            sys.exit(1)
