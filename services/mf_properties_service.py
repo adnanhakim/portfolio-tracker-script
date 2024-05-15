@@ -6,6 +6,8 @@ This module contains a service class which reads and stores MF Properties sheet.
 
 """
 
+import os
+import sys
 from typing import Self
 
 from gspread.spreadsheet import Spreadsheet
@@ -14,6 +16,7 @@ from gspread.worksheet import Worksheet
 from apis.google_sheets_client import GoogleSheetsClient
 from models.mf_property import MFProperty
 from utils import files
+from utils.functions import to_num
 
 
 class MFPropertiesService:
@@ -23,13 +26,14 @@ class MFPropertiesService:
     _worksheet = None
     _mf_properties: dict[str, MFProperty]
 
-    _WORKSHEET_NAME = "MF Properties"
+    _WORKSHEET_NAME: str | None = os.environ.get("PROPERTIES_WORKSHEET_NAME")
 
-    _FUND_NAME_COL = 1
-    _AMFI_CODE_COL = 3
-    _PORTFOLIO_COL = 4
-    _ASSET_COL = 5
-    _COUNTRY_COL = 6
+    _FIRST_ROW: int | None = int(os.environ.get("PROPERTIES_FIRST_ROW"))
+    _FUND_NAME_COL: int | None = to_num(os.environ.get("PROPERTIES_FUND_NAME_COL"))
+    _AMFI_CODE_COL: int | None = to_num(os.environ.get("PROPERTIES_AMFI_CODE_COL"))
+    _PORTFOLIO_COL: int | None = to_num(os.environ.get("PROPERTIES_PORTFOLIO_COL"))
+    _ASSET_COL: int | None = to_num(os.environ.get("PROPERTIES_ASSET_COL"))
+    _COUNTRY_COL: int | None = to_num(os.environ.get("PROPERTIES_COUNTRY_COL"))
 
     _FOLDER_NAME = "sheet_data"
     _FILE_NAME = "mf_properties"
@@ -41,6 +45,18 @@ class MFPropertiesService:
             self._mf_properties: dict[str, MFProperty] = self._fetch_data_from_cache()
 
     def _fetch_data_from_sheets(self: Self) -> dict[str, MFProperty]:
+        if (
+            self._WORKSHEET_NAME is None
+            or self._FIRST_ROW is None
+            or self._FUND_NAME_COL is None
+            or self._AMFI_CODE_COL is None
+            or self._ASSET_COL is None
+        ):
+            print(
+                "\nOne or more environment variables are not set for MF Properties Sheet"
+            )
+            sys.exit(1)
+
         print(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...")
 
         if self._sheet is None:
@@ -90,5 +106,5 @@ class MFPropertiesService:
     def _serialize(self: Self, mf_properties: dict[str, MFProperty]) -> dict[str:dict]:
         return {key: value.to_dict() for key, value in mf_properties.items()}
 
-    def get_mf_properties(self: Self) -> dict[str, MFProperty]:
+    def mf_properties(self: Self) -> dict[str, MFProperty]:
         return self._mf_properties

@@ -20,6 +20,7 @@ from apis.mf_api_client import MFApiClient
 from models.mf_property import MFProperty
 from models.mf_transaction import MFTransaction
 from utils import dates, files
+from utils.functions import to_num
 
 load_dotenv()
 
@@ -31,15 +32,16 @@ class MFDataService:
     _worksheet = None
     _mf_txn_data: list[MFTransaction]
 
-    _WORKSHEET_NAME = "MF Data"
+    _WORKSHEET_NAME: str | None = os.environ.get("TRANSACTIONS_WORKSHEET_NAME")
 
-    _FUND_NAME_COL = 1
-    _BUY_SELL_COL = 2
-    _UNITS_COL = 6
-    _BUY_DATE_COL = 8
-    _BUY_PRICE_COL = 9
-    _SELL_DATE_COL = 12
-    _SELL_PRICE_COL = 13
+    _FIRST_ROW: int | None = int(os.environ.get("TRANSACTIONS_FIRST_ROW"))
+    _FUND_NAME_COL: int | None = to_num(os.environ.get("TRANSACTIONS_FUND_NAME_COL"))
+    _BUY_SELL_COL: int | None = to_num(os.environ.get("TRANSACTIONS_BUY_SELL_COL"))
+    _UNITS_COL: int | None = to_num(os.environ.get("TRANSACTIONS_UNITS_COL"))
+    _BUY_DATE_COL: int | None = to_num(os.environ.get("TRANSACTIONS_BUY_DATE_COL"))
+    _BUY_PRICE_COL: int | None = to_num(os.environ.get("TRANSACTIONS_BUY_PRICE_COL"))
+    _SELL_DATE_COL: int | None = to_num(os.environ.get("TRANSACTIONS_SELL_DATE_COL"))
+    _SELL_PRICE_COL: int | None = to_num(os.environ.get("TRANSACTIONS_SELL_PRICE_COL"))
 
     _FOLDER_NAME = "sheet_data"
     _FILE_NAME = "mf_txn_data"
@@ -55,6 +57,22 @@ class MFDataService:
             self._mf_txn_data: list[MFTransaction] = self._fetch_data_from_cache()
 
     def _fetch_data_from_sheets(self):
+        if (
+            self._WORKSHEET_NAME is None
+            or self._FIRST_ROW is None
+            or self._FUND_NAME_COL is None
+            or self._BUY_SELL_COL is None
+            or self._UNITS_COL is None
+            or self._BUY_DATE_COL is None
+            or self._BUY_PRICE_COL is None
+            or self._SELL_DATE_COL is None
+            or self._SELL_PRICE_COL is None
+        ):
+            print(
+                "\nOne or more environment variables are not set for MF Transaction Sheet"
+            )
+            sys.exit(1)
+
         print(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...")
 
         if self._sheet is None:
@@ -67,8 +85,8 @@ class MFDataService:
 
         txn_list: list[MFTransaction] = []
 
-        # Data begins from the 4th row
-        for row in rows[4:]:
+        # Data begins from the specified row
+        for row in rows[self._FIRST_ROW :]:
             txn_list.append(
                 MFTransaction(
                     fund=row[self._FUND_NAME_COL],
