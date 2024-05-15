@@ -19,10 +19,6 @@ Create a new `.env` file in the project's directory.
 SHEET_ID=<google-sheets-id>
 CREDENTIALS_FILE=<credentials-file-name>.json
 
-# Google Sheets Configuration
-SHEET_ID=1OADY_oUmMUgWmZxm0c06_RivG02ZDroBdySiJQa-DOA
-CREDENTIALS_FILE=credentials.json
-
 # MF Transactions Sheet
 TRANSACTIONS_WORKSHEET_NAME="MF Data"
 TRANSACTIONS_FIRST_ROW=4
