@@ -21,23 +21,23 @@ CREDENTIALS_FILE=<credentials-file-name>.json
 
 # MF Transactions Sheet
 TRANSACTIONS_WORKSHEET_NAME="MF Data"
-TRANSACTIONS_FIRST_ROW=4
-TRANSACTIONS_FUND_NAME_COL=B
-TRANSACTIONS_BUY_SELL_COL=C
-TRANSACTIONS_UNITS_COL=G
-TRANSACTIONS_BUY_DATE_COL=I
-TRANSACTIONS_BUY_PRICE_COL=J
-TRANSACTIONS_SELL_DATE_COL=M
-TRANSACTIONS_SELL_PRICE_COL=N
+TRANSACTIONS_FIRST_ROW=2
+TRANSACTIONS_FUND_NAME_COL=A
+TRANSACTIONS_BUY_SELL_COL=B
+TRANSACTIONS_UNITS_COL=C
+TRANSACTIONS_BUY_DATE_COL=D
+TRANSACTIONS_BUY_PRICE_COL=E
+TRANSACTIONS_SELL_DATE_COL=F
+TRANSACTIONS_SELL_PRICE_COL=G
 
 # MF Properties Sheet
 PROPERTIES_WORKSHEET_NAME="MF Properties"
-PROPERTIES_FIRST_ROW=4
-PROPERTIES_FUND_NAME_COL=B
-PROPERTIES_AMFI_CODE_COL=D
-PROPERTIES_PORTFOLIO_COL=E
-PROPERTIES_ASSET_COL=F
-PROPERTIES_COUNTRY_COL=G
+PROPERTIES_FIRST_ROW=2
+PROPERTIES_FUND_NAME_COL=A
+PROPERTIES_AMFI_CODE_COL=B
+PROPERTIES_PORTFOLIO_COL=C
+PROPERTIES_ASSET_COL=D
+PROPERTIES_COUNTRY_COL=E
 
 # Benchmark Configuration
 BENCHMARK_FUND=UTI Nifty 50 Index Fund
@@ -52,7 +52,7 @@ You will need 2 sheets to process the data.  Sheet 1 will contain the transactio
 
 The following columns are mandatory (can be in any order).
 
-Update the sheet name and column numbers (0 indexed) in `services/mf_data_service.py`
+Update the sheet name and column numbers (0 indexed) in `.env`
 
 | Fund Name               | Buy/Sell | Units | Buy Date   | Buy Price | Sell Date  | Sell Price |
 |-------------------------|----------|-------|------------|-----------|------------|------------|
@@ -70,7 +70,7 @@ Update the sheet name and column numbers (0 indexed) in `services/mf_data_servic
 
 The following columns are recommended (can be in any order).
 
-Update the sheet name and column numbers (0 indexed) in `services/mf_properties_service.py`
+Update the sheet name and column numbers (0 indexed) in `.env`
 
 | Fund Name               | AMFI Code | Asset  | Portfolio | Country |
 |-------------------------|-----------|--------|-----------|---------|

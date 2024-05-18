@@ -11,6 +11,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 
 from features.mf_asset_value import calculate_monthly_asset_value
+from features.process_transactions import process_transactions
 from features.test_connection import test_connection
 from utils import dates
 
@@ -52,6 +53,11 @@ parser.add_argument(
     action="store_true",
     help="Specify this flag to invalidate cache and fetch latest values",
 )
+parser.add_argument(
+    "--filepath",
+    type=str,
+    help="Specify the Excel file path to be processed",
+)
 
 
 args: Namespace = parser.parse_args()
@@ -62,6 +68,8 @@ if command == "assetvalue":
     calculate_monthly_asset_value(args)
 elif command == "test":
     test_connection()
+elif command == "process":
+    process_transactions(args)
 else:
     print("Unsupported command. Run --help for more information.")
     sys.exit(1)
