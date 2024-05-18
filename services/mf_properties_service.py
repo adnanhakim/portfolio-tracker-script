@@ -16,6 +16,7 @@ from gspread.worksheet import Worksheet
 from apis.google_sheets_client import GoogleSheetsClient
 from models.mf_property import MFProperty
 from utils import files
+from utils import logger as log
 from utils.functions import to_num
 
 
@@ -52,12 +53,12 @@ class MFPropertiesService:
             or self._AMFI_CODE_COL is None
             or self._ASSET_COL is None
         ):
-            print(
+            log.error(
                 "\nOne or more environment variables are not set for MF Properties Sheet"
             )
             sys.exit(1)
 
-        print(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...")
+        log.info(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...", True)
 
         if self._sheet is None:
             self._sheet: Spreadsheet = GoogleSheetsClient().get_sheet()
@@ -79,27 +80,34 @@ class MFPropertiesService:
                     country=row[self._COUNTRY_COL],
                 )
 
+        log.info(
+            f"Fetched {len(mf_properties)} properties from sheet {self._WORKSHEET_NAME}"
+        )
+
         serialized_dict: dict[str, str] = self._serialize(mf_properties)
 
         # Save file to cache
         files.save_file_as_json(self._FOLDER_NAME, self._FILE_NAME, serialized_dict)
+        log.debug(f"Saved {len(serialized_dict)} properties to cache")
 
         return mf_properties
 
     def _fetch_data_from_cache(self: Self) -> dict[str, MFProperty]:
-        print(f"Fetching {self._WORKSHEET_NAME} from cache...")
+        log.info(f"Fetching {self._WORKSHEET_NAME} from cache...", True)
 
         json_data: dict[str, str] | None = files.read_file_as_json(
             self._FOLDER_NAME, self._FILE_NAME
         )
 
         if json_data is None:
-            print(f"Did not find {self._WORKSHEET_NAME} in cache")
+            log.warning(f"Did not find {self._WORKSHEET_NAME} in cache")
             return self._fetch_data_from_sheets()
 
         mf_properties: dict[str, MFProperty] = {
             key: MFProperty.from_dict(value) for key, value in json_data.items()
         }
+
+        log.info(f"Fetched {len(mf_properties)} properties from cache")
 
         return mf_properties
 

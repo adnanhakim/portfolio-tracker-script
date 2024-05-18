@@ -10,6 +10,7 @@ from argparse import Namespace
 from datetime import datetime
 from decimal import Decimal
 
+from tabulate import tabulate
 from xirr.math import listsXirr
 
 from apis.mf_api_client import MFApiClient
@@ -18,6 +19,7 @@ from models.mf_transaction import MFTransaction
 from services.mf_data_service import MFDataService
 from services.mf_properties_service import MFPropertiesService
 from utils import dates
+from utils.functions import format_inr
 
 HEADERS: list = [
     "Month",
@@ -34,11 +36,12 @@ HEADERS: list = [
 
 def calculate_monthly_asset_value(args: Namespace):
     # Parse arguments
-    from_datestring: str = args.fromdate
-    to_datestring: str = args.todate
+    from_date: datetime = args.from_date
+    to_date: datetime = args.to_date
     is_benchmark: bool = args.benchmark
+    equity_benchmark: int = args.equity_benchmark
     equity_only: bool = args.equity
-    override_cache: bool = args.nocache
+    override_cache: bool = args.override_cache
 
     # Get transactions
     mf_data_service: MFDataService = MFDataService(override_cache)
@@ -50,19 +53,14 @@ def calculate_monthly_asset_value(args: Namespace):
         override_cache
     ).mf_properties()
 
-    # Get benchmark transactions
-    benchmark_txn_list = []
-    if is_benchmark:
-        benchmark_txn_list: list[MFTransaction] = mf_data_service.benchmark_txn_data(
-            mf_properties, mf_api_client
-        )
-
-    # Parse dates
-    from_date: datetime = dates.from_month_year(from_datestring)
-    to_date: datetime = dates.from_month_year(to_datestring)
+    # Calculate which type of assets to include
+    assets_to_include: list[str] = ["equity", "elss"]
+    if not equity_only:
+        assets_to_include.append("debt")
+        assets_to_include.append("arbitrage")
 
     print(
-        f"\nCalculating asset value from {from_datestring.capitalize()} to {to_datestring.capitalize()}...\n"
+        f"\nCalculating asset value from {dates.to_month_year(from_date)} to {dates.to_month_year(to_date)}...\n"
     )
 
     mf_data: list[list] = []
@@ -72,8 +70,8 @@ def calculate_monthly_asset_value(args: Namespace):
     while temp_date <= to_date:
         mf_data.append(
             calculate_asset_value(
-                mf_txn_list, mf_properties, mf_api_client, temp_date, equity_only
-            )
+                mf_txn_list, mf_properties, mf_api_client, temp_date, assets_to_include
+            )["data"]
         )
         temp_date: datetime = dates.add_month(temp_date)
 
@@ -84,11 +82,20 @@ def calculate_monthly_asset_value(args: Namespace):
 
     print(f"\nPortfolio Returns (XIRR) on {last_month_data[0]} is {last_month_data[4]}")
 
-    if is_benchmark and len(benchmark_txn_list) != 0:
+    if is_benchmark:
+        # Get benchmark transactions
+        benchmark_txn_list = []
+        if is_benchmark:
+            benchmark_txn_list: list[MFTransaction] = mf_data_service.benchmark_txn_data(
+                mf_properties, mf_api_client, equity_benchmark
+            )
+
+        mf_properties["Benchmark"] = MFProperty(equity_benchmark, "Benchmark", "Equity", "India")
+
         print("\n------------------------")
 
         print(
-            f"\nCalculating benchmark value from {from_datestring.capitalize()} to {to_datestring.capitalize()}...\n"
+            f"\nCalculating benchmark value from {dates.to_month_year(from_date)} to {dates.to_month_year(to_date)}...\n"
         )
 
         benchmark_data: list = []
@@ -102,8 +109,8 @@ def calculate_monthly_asset_value(args: Namespace):
                     mf_properties,
                     mf_api_client,
                     temp_date,
-                    equity_only,
-                )
+                    assets_to_include,
+                )["data"]
             )
             temp_date: datetime = dates.add_month(temp_date)
 
@@ -112,8 +119,10 @@ def calculate_monthly_asset_value(args: Namespace):
 
         last_month_benchmark_data: list = benchmark_data[len(benchmark_data) - 1]
 
+        benchmark_fund_name: str = mf_api_client.get_fund_name(equity_benchmark)
+
         print(
-            f"\nBenchmark Returns (XIRR) on {last_month_benchmark_data[0]} is {last_month_benchmark_data[4]}"
+            f"\n{benchmark_fund_name} Returns (XIRR) on {last_month_benchmark_data[0]} is {last_month_benchmark_data[4]}"
         )
 
         print("\n------------------------")
@@ -126,8 +135,10 @@ def calculate_asset_value(
     mf_properties: dict[str:MFProperty],
     mf_api_client: MFApiClient,
     date: datetime,
-    equity_only: bool,
-) -> list:
+    assets_to_include: list[str],
+    portfolio=None,
+    country=None
+) -> dict:
     # Contains the units, nav, asset type of each fund
     fund_map: dict[str] = {}
 
@@ -144,10 +155,16 @@ def calculate_asset_value(
     for txn in txn_list:
         mf_property: MFProperty = mf_properties[txn.fund]
 
-        # Ignore non-equity if equity only flag is enabled
-        if equity_only and (
-            mf_property.asset == "Debt" or mf_property.asset == "Arbitrage"
-        ):
+        # Filter by asset type
+        if mf_property.asset.lower() not in assets_to_include:
+            continue
+
+        # Filter by portfolio
+        if portfolio is not None and mf_property.portfolio.lower() != portfolio.lower():
+            continue
+
+        # Filter by country
+        if country is not None and mf_property.country.lower() != country.lower():
             continue
 
         # Two types of transactions will be eligible
@@ -168,6 +185,8 @@ def calculate_asset_value(
                     "nav": current_price,
                     "units": txn.units,
                     "asset": mf_property.asset,
+                    "portfolio": mf_property.portfolio,
+                    "country": mf_property.country
                 }
 
             buy_value: Decimal = txn.units * txn.buy_price
@@ -225,39 +244,70 @@ def calculate_asset_value(
     # Calculate absolute returns
     absolute_returns: Decimal = (current_value - invested_value) / invested_value
 
-    return [
-        dates.to_month_year(date),
-        round(invested_value),
-        round(current_value),
-        str(round(absolute_returns * 100, 2)) + "%",
-        str(round(xirr * 100, 2)) + "%",
-        round(realized_profit),
-        str(round((equity_value / current_value) * 100, 2)) + "%",
-        str(round((debt_value / current_value) * 100, 2)) + "%",
-        str(round((cash_value / current_value) * 100, 2)) + "%",
-    ]
-
+    return {
+        "meta": fund_map,
+        "data": [
+            dates.to_month_year(date),
+            round(invested_value),
+            round(current_value),
+            str(round(absolute_returns * 100, 2)) + "%",
+            str(round(xirr * 100, 2)) + "%",
+            round(realized_profit),
+            str(round((equity_value / current_value) * 100, 2)) + "%",
+            str(round((debt_value / current_value) * 100, 2)) + "%",
+            str(round((cash_value / current_value) * 100, 2)) + "%",
+        ]
+    }
 
 def print_summary(last_month_data, last_month_benchmark_data):
     xirr_diff: Decimal = Decimal(last_month_data[4].rstrip("%")) - Decimal(
         last_month_benchmark_data[4].rstrip("%")
     )
 
+    tuple_list = [
+        (
+            "Unrealized",
+            format_inr(last_month_data[2]),
+            format_inr(last_month_benchmark_data[2]),
+            format_inr(last_month_data[2] - last_month_benchmark_data[2]),
+        ),
+        (
+            "Realized",
+            format_inr(last_month_data[5]),
+            format_inr(last_month_benchmark_data[5]),
+            format_inr(last_month_data[5] - last_month_benchmark_data[5]),
+        ),
+        # (
+        #     "Absolute",
+        #     format_inr(last_month_data[2]),
+        #     format_inr(last_month_benchmark_data[2]),
+        #     format_inr(last_month_data[2] - last_month_benchmark_data[2]),
+        # ),
+        # (
+        #     "XIRR",
+        #     format_inr(last_month_data[2]),
+        #     format_inr(last_month_benchmark_data[2]),
+        #     format_inr(last_month_data[2] - last_month_benchmark_data[2]),
+        # ),
+    ]
+
+    print(tabulate(tuple_list, headers=['','Your Portfolio', 'Benchmark', 'Difference'], tablefmt="plain"))
+
     if xirr_diff > 0:
         print(f"\nPortfolio is outperforming benchmark as of {last_month_data[0]}")
         print(f"XIRR Gain: {str(xirr_diff) + "%"}")
         print(
-            f"Additional Unrealized Gains: {last_month_data[2] - last_month_benchmark_data[2]}"
+            f"Additional Unrealized Gains: {format_inr(last_month_data[2] - last_month_benchmark_data[2])}"
         )
         print(
-            f"Additional Realized Gains: {last_month_data[5] - last_month_benchmark_data[5]}"
+            f"Additional Realized Gains: {format_inr(last_month_data[5] - last_month_benchmark_data[5])}"
         )
     else:
         print(f"Portfolio is lagging behind benchmark as of {last_month_data[0]}")
         print(f"XIRR Loss: {str(abs(xirr_diff)) + "%"}")
         print(
-            f"Additional Unrealized Losses: {abs(last_month_data[2] - last_month_benchmark_data[2])}"
+            f"Additional Unrealized Losses: {format_inr(abs(last_month_data[2] - last_month_benchmark_data[2]))}"
         )
         print(
-            f"Additional Realized Losses: {abs(last_month_data[5] - last_month_benchmark_data[5])}"
+            f"Additional Realized Losses: {format_inr(abs(last_month_data[5] - last_month_benchmark_data[5]))}"
         )

@@ -11,7 +11,6 @@ import sys
 from decimal import Decimal
 from typing import Self
 
-from dotenv import load_dotenv
 from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 
@@ -20,9 +19,8 @@ from apis.mf_api_client import MFApiClient
 from models.mf_property import MFProperty
 from models.mf_transaction import MFTransaction
 from utils import dates, files
+from utils import logger as log
 from utils.functions import to_num
-
-load_dotenv()
 
 
 class MFDataService:
@@ -68,12 +66,12 @@ class MFDataService:
             or self._SELL_DATE_COL is None
             or self._SELL_PRICE_COL is None
         ):
-            print(
-                "\nOne or more environment variables are not set for MF Transaction Sheet"
+            log.error(
+                "One or more environment variables are not set for MF Transaction Sheet"
             )
             sys.exit(1)
 
-        print(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...")
+        log.info(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...", True)
 
         if self._sheet is None:
             self._sheet: Spreadsheet = GoogleSheetsClient().get_sheet()
@@ -99,6 +97,10 @@ class MFDataService:
                 )
             )
 
+        log.info(
+            f"Fetched {len(txn_list)} transactions from sheet {self._WORKSHEET_NAME}"
+        )
+
         # Sort transactions based on buy date
         sorted_txn_list: list[MFTransaction] = sorted(
             txn_list, key=lambda x: (x.buy_date, x.fund)
@@ -108,23 +110,26 @@ class MFDataService:
 
         # Save file to cache
         files.save_file_as_json(self._FOLDER_NAME, self._FILE_NAME, serialized_list)
+        log.debug(f"Saved {len(serialized_list)} transactions to cache")
 
         return sorted_txn_list
 
     def _fetch_data_from_cache(self):
-        print(f"Fetching {self._WORKSHEET_NAME} from cache...")
+        log.info(f"Fetching {self._WORKSHEET_NAME} from cache...", True)
 
         json_data: list[dict] | None = files.read_file_as_json(
             self._FOLDER_NAME, self._FILE_NAME
         )
 
         if json_data is None:
-            print(f"Did not find {self._WORKSHEET_NAME} in cache")
+            log.warning(f"Did not find {self._WORKSHEET_NAME} in cache")
             return self._fetch_data_from_sheets()
 
         txn_list: list[MFTransaction] = [
             MFTransaction.from_dict(value) for value in json_data
         ]
+
+        log.info(f"Fetched {len(txn_list)} transactions from cache")
 
         return txn_list
 
@@ -135,24 +140,19 @@ class MFDataService:
         return self._mf_txn_data
 
     def benchmark_txn_data(
-        self: Self, mf_properties: dict[str, MFProperty], mf_api_client: MFApiClient
+        self: Self,
+        mf_properties: dict[str, MFProperty],
+        mf_api_client: MFApiClient,
+        amfi_code: int,
     ) -> list[MFTransaction]:
-        json_data: list[dict] | None = files.read_file_as_json(
-            self._FOLDER_NAME, self._BENCHMARK_FILE_NAME
-        )
-
-        if json_data is not None:
-            return [MFTransaction.from_dict(value) for value in json_data]
-
-        return self._create_benchmark_data(mf_properties, mf_api_client)
+        return self._create_benchmark_data(mf_properties, mf_api_client, amfi_code)
 
     def _create_benchmark_data(
-        self: Self, mf_properties: dict[str, MFProperty], mf_api_client: MFApiClient
+        self: Self,
+        mf_properties: dict[str, MFProperty],
+        mf_api_client: MFApiClient,
+        amfi_code: int,
     ) -> list[MFTransaction]:
-        if self._BENCHMARK_FUND is None or self._BENCHMARK_FUND_AMFI_CODE is None:
-            print("Benchmark environment variables are not set.")
-            sys.exit(1)
-
         actual_txn_list: list[MFTransaction] = self.mf_txn_data()
 
         if actual_txn_list is None:
@@ -165,7 +165,6 @@ class MFDataService:
 
             # Skip non-equity funds
             if mf_property.asset == "Debt" or mf_property.asset == "Arbitrage":
-                print("hiiii")
                 benchmark_txn_list.append(
                     MFTransaction(
                         fund=txn.fund,
@@ -184,7 +183,7 @@ class MFDataService:
 
             # Get benchmark price at actual txn buy date
             benchmark_buy_price: Decimal = mf_api_client.get_nav_price(
-                self._BENCHMARK_FUND_AMFI_CODE, txn.buy_date
+                amfi_code, txn.buy_date
             )
 
             # Get estimated benchmark units up to 3 decimal places
@@ -193,14 +192,12 @@ class MFDataService:
             benchmark_sell_price: Decimal = (
                 txn.sell_price
                 if txn.buy_sell == "BUY"
-                else mf_api_client.get_nav_price(
-                    self._BENCHMARK_FUND_AMFI_CODE, txn.sell_date
-                )
+                else mf_api_client.get_nav_price(amfi_code, txn.sell_date)
             )
 
             benchmark_txn_list.append(
                 MFTransaction(
-                    fund=self._BENCHMARK_FUND,
+                    fund="Benchmark",
                     buy_sell=txn.buy_sell,
                     units=str(benchmark_units),
                     buy_date=dates.to_datestring(txn.buy_date),
@@ -209,12 +206,5 @@ class MFDataService:
                     sell_price=str(benchmark_sell_price),
                 )
             )
-
-        serialized_list: list[dict] = self._serialize(benchmark_txn_list)
-
-        # Save file to cache
-        files.save_file_as_json(
-            self._FOLDER_NAME, self._BENCHMARK_FILE_NAME, serialized_list
-        )
 
         return benchmark_txn_list

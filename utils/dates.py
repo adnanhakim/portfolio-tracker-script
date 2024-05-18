@@ -35,8 +35,8 @@ def add_month(date: datetime) -> datetime:
     return date.replace(day=1)
 
 
-def get_last_month_datestring() -> str:
+def get_last_month_date() -> datetime:
     """Gets last month's date as string with format MMM-yyyy"""
     current_date: datetime = datetime.now()
     last_month: datetime = current_date - timedelta(days=current_date.day)
-    return last_month.replace(day=1).strftime("%b-%Y")
+    return last_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
