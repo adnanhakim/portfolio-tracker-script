@@ -7,17 +7,17 @@ Run python3 main.py --help for more information.
 
 """
 
+import logging
 from argparse import ArgumentParser, ArgumentTypeError, Namespace, _SubParsersAction
 from datetime import datetime
 
 from colorama import init
 from dotenv import load_dotenv
 
-from features.mf_asset_value import calculate_monthly_asset_value
+from features.mf_monthly_asset_value import calculate_monthly_asset_value
 from features.mf_summary import calculate_portfolio_summary
 from features.test_connection import test_connection
-from utils import dates
-from utils import logger as log
+from utils import dates, logger
 
 # Load environment variables
 load_dotenv()
@@ -49,6 +49,12 @@ subparsers: _SubParsersAction = parser.add_subparsers(
 
 parser_test: ArgumentParser = subparsers.add_parser(
     "test", help="test connection to google sheets"
+)
+parser_test.add_argument(
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    help="verbose mode for detailed logging",
 )
 
 parser_assetvalue: ArgumentParser = subparsers.add_parser(
@@ -98,6 +104,12 @@ parser_assetvalue.add_argument(
     action="store_true",
     help="invalidate cache and fetch latest values",
 )
+parser_assetvalue.add_argument(
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    help="verbose mode for detailed logging",
+)
 
 parser_summary: ArgumentParser = subparsers.add_parser(
     "summary", help="generate portfolio summary"
@@ -133,11 +145,20 @@ parser_summary.add_argument(
     action="store_true",
     help="invalidate cache and fetch latest values",
 )
+parser_summary.add_argument(
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    help="verbose mode for detailed logging",
+)
 
 # Get arguments
 args: Namespace = parser.parse_args()
 
-log.debug(args)
+# Setup logging
+logger.setup_logging(args.verbose)
+
+logging.debug("CLI Args: %s", args)
 
 if args.command == "assetvalue":
     calculate_monthly_asset_value(args)

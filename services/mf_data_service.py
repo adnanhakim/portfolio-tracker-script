@@ -6,6 +6,7 @@ This module contains a service class which reads and stores MF Data sheet.
 
 """
 
+import logging
 import os
 import sys
 from decimal import Decimal
@@ -19,7 +20,6 @@ from apis.mf_api_client import MFApiClient
 from models.mf_property import MFProperty
 from models.mf_transaction import MFTransaction
 from utils import dates, files
-from utils import logger as log
 from utils.functions import to_num
 
 
@@ -43,10 +43,6 @@ class MFDataService:
 
     _FOLDER_NAME = "sheet_data"
     _FILE_NAME = "mf_txn_data"
-    _BENCHMARK_FILE_NAME = "benchmark_txn_data"
-
-    _BENCHMARK_FUND: str | None = os.environ.get("BENCHMARK_FUND")
-    _BENCHMARK_FUND_AMFI_CODE: str | None = os.environ.get("BENCHMARK_FUND_AMFI_CODE")
 
     def __init__(self, override_cache=False) -> None:
         if override_cache is True:
@@ -66,12 +62,12 @@ class MFDataService:
             or self._SELL_DATE_COL is None
             or self._SELL_PRICE_COL is None
         ):
-            log.error(
+            logging.error(
                 "One or more environment variables are not set for MF Transaction Sheet"
             )
             sys.exit(1)
 
-        log.info(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...", True)
+        logging.info("Fetching %s from Google Sheets...", self._WORKSHEET_NAME)
 
         if self._sheet is None:
             self._sheet: Spreadsheet = GoogleSheetsClient().get_sheet()
@@ -97,8 +93,8 @@ class MFDataService:
                 )
             )
 
-        log.info(
-            f"Fetched {len(txn_list)} transactions from sheet {self._WORKSHEET_NAME}"
+        logging.info(
+            "Fetched %s transactions from sheet %s", len(txn_list), self._WORKSHEET_NAME
         )
 
         # Sort transactions based on buy date
@@ -110,26 +106,26 @@ class MFDataService:
 
         # Save file to cache
         files.save_file_as_json(self._FOLDER_NAME, self._FILE_NAME, serialized_list)
-        log.debug(f"Saved {len(serialized_list)} transactions to cache")
+        logging.debug("Saved %s transactions to cache", len(serialized_list))
 
         return sorted_txn_list
 
     def _fetch_data_from_cache(self):
-        log.info(f"Fetching {self._WORKSHEET_NAME} from cache...", True)
+        logging.info("Fetching %s from cache...", self._WORKSHEET_NAME)
 
         json_data: list[dict] | None = files.read_file_as_json(
             self._FOLDER_NAME, self._FILE_NAME
         )
 
         if json_data is None:
-            log.warning(f"Did not find {self._WORKSHEET_NAME} in cache")
+            logging.warning("Did not find %s in cache", self._WORKSHEET_NAME)
             return self._fetch_data_from_sheets()
 
         txn_list: list[MFTransaction] = [
             MFTransaction.from_dict(value) for value in json_data
         ]
 
-        log.info(f"Fetched {len(txn_list)} transactions from cache")
+        logging.info("Fetched %s transactions from cache", len(txn_list))
 
         return txn_list
 

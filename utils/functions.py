@@ -9,6 +9,8 @@ This module contains commonly used helper functions.
 from decimal import Decimal
 
 from babel.numbers import format_currency
+from colorama import Fore, Style
+from tabulate import tabulate
 
 
 def to_num(column_letter: str) -> int | None:
@@ -25,3 +27,13 @@ def to_num(column_letter: str) -> int | None:
 def format_inr(amount: Decimal) -> str:
     """Converts decimal number to INR notation"""
     return format_currency(amount, "INR", locale="en_IN")
+
+
+def print_header(header: str) -> None:
+    """Print coloured bold header"""
+    print(f"\n{Fore.CYAN}{Style.BRIGHT}{header}{Style.RESET_ALL}")
+
+
+def print_table(tuple_list: list[tuple]) -> None:
+    """Print tuple list as table"""
+    print(tabulate(tuple_list, tablefmt="plain"))
