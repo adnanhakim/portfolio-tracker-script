@@ -6,6 +6,7 @@ This module contains a service class which reads and stores MF Properties sheet.
 
 """
 
+import logging
 import os
 import sys
 from typing import Self
@@ -17,6 +18,7 @@ from apis.google_sheets_client import GoogleSheetsClient
 from models.mf_property import MFProperty
 from utils import files
 from utils.functions import to_num
+from utils.logger import setup_logging
 
 
 class MFPropertiesService:
@@ -52,12 +54,12 @@ class MFPropertiesService:
             or self._AMFI_CODE_COL is None
             or self._ASSET_COL is None
         ):
-            print(
-                "\nOne or more environment variables are not set for MF Properties Sheet"
+            logging.error(
+                "One or more environment variables are not set for MF Properties Sheet"
             )
             sys.exit(1)
 
-        print(f"Fetching {self._WORKSHEET_NAME} from Google Sheets...")
+        logging.info("Fetching %s from Google Sheets...", self._WORKSHEET_NAME)
 
         if self._sheet is None:
             self._sheet: Spreadsheet = GoogleSheetsClient().get_sheet()
@@ -79,27 +81,36 @@ class MFPropertiesService:
                     country=row[self._COUNTRY_COL],
                 )
 
+        logging.info(
+            "Fetched %s properties from sheet %s",
+            len(mf_properties),
+            self._WORKSHEET_NAME,
+        )
+
         serialized_dict: dict[str, str] = self._serialize(mf_properties)
 
         # Save file to cache
         files.save_file_as_json(self._FOLDER_NAME, self._FILE_NAME, serialized_dict)
+        logging.debug("Saved %s properties to cache", len(serialized_dict))
 
         return mf_properties
 
     def _fetch_data_from_cache(self: Self) -> dict[str, MFProperty]:
-        print(f"Fetching {self._WORKSHEET_NAME} from cache...")
+        logging.info("Fetching %s from cache...", self._WORKSHEET_NAME)
 
         json_data: dict[str, str] | None = files.read_file_as_json(
             self._FOLDER_NAME, self._FILE_NAME
         )
 
         if json_data is None:
-            print(f"Did not find {self._WORKSHEET_NAME} in cache")
+            logging.warning("Did not find %s in cache", self._WORKSHEET_NAME)
             return self._fetch_data_from_sheets()
 
         mf_properties: dict[str, MFProperty] = {
             key: MFProperty.from_dict(value) for key, value in json_data.items()
         }
+
+        logging.info("Fetched %s properties from cache", self._WORKSHEET_NAME)
 
         return mf_properties
 

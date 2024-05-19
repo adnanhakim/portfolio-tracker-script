@@ -31,7 +31,7 @@ class MFPrice:
         return self._date
 
     @date.setter
-    def buy_date(self, date: datetime) -> None:
+    def date(self, date: datetime) -> None:
         self._date = date
 
     @property

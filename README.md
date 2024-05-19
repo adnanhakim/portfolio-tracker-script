@@ -1,4 +1,4 @@
-# Portfolio Tracker Google Sheets 
+# Portfolio Tracker Google Sheets
 
 A Python script that analyzes investment portfolio data from a Google Sheet
 
@@ -6,14 +6,15 @@ A Python script that analyzes investment portfolio data from a Google Sheet
 
 1. Login or create an account in Google Developer Console.
 2. Create a new project and enable the Google Sheets API for your project.
-4. Create a service account under IAM & Admin.
-5. Create a new JSON key and save the key in the project's directory.
-6. Open the Google Sheet you want to shar and click on the Share button.
-7. Enter the email address of the service account (found in the JSON file downloaded earlier) and set the access level to `Viewer` or `Can view` to grant read-only access.
+3. Create a service account under IAM & Admin.
+4. Create a new JSON key and save the key in the project's directory.
+5. Open the Google Sheet you want to shar and click on the Share button.
+6. Enter the email address of the service account (found in the JSON file downloaded earlier) and set the access level to `Viewer` or `Can view` to grant read-only access.
 
 ## Setup Environment Variables for the project
 
 Create a new `.env` file in the project's directory.
+
 ```properties
 # Google Sheets Configuration
 SHEET_ID=<google-sheets-id>
@@ -38,15 +39,11 @@ PROPERTIES_AMFI_CODE_COL=D
 PROPERTIES_PORTFOLIO_COL=E
 PROPERTIES_ASSET_COL=F
 PROPERTIES_COUNTRY_COL=G
-
-# Benchmark Configuration
-BENCHMARK_FUND=UTI Nifty 50 Index Fund
-BENCHMARK_FUND_AMFI_CODE=120716
 ```
 
 ## Setup Google Sheets
 
-You will need 2 sheets to process the data.  Sheet 1 will contain the transactions and Sheet 2 will contain additional mutual fund properties.
+You will need 2 sheets to process the data. Sheet 1 will contain the transactions and Sheet 2 will contain additional mutual fund properties.
 
 ### Sheet 1 (Can be named as per your choice)
 
@@ -55,16 +52,15 @@ The following columns are mandatory (can be in any order).
 Update the sheet name and column numbers (0 indexed) in `services/mf_data_service.py`
 
 | Fund Name               | Buy/Sell | Units | Buy Date   | Buy Price | Sell Date  | Sell Price |
-|-------------------------|----------|-------|------------|-----------|------------|------------|
+| ----------------------- | -------- | ----- | ---------- | --------- | ---------- | ---------- |
 | UTI Nifty 50 Index Fund | SELL     | 10    | 01-01-2022 | 100.000   | 20-02-2022 | 105.000    |
 | UTI Nifty 50 Index Fund | BUY      | 10    | 01-07-2022 | 100.000   |            |            |
 
 1. Fund Name - Name of the fund (can be any name, but has to be the same name in Sheet 2).
 2. Buy/Sell - Indicator to denote if the transaction has been fully sold or yet to be sold.
-    Suppose you have 2 units of a fund, but only sell 1 unit, create 2 rows in transaction sheet, one with 1 unit with SELL and the other with 1 unit as BUY.
+   Suppose you have 2 units of a fund, but only sell 1 unit, create 2 rows in transaction sheet, one with 1 unit with SELL and the other with 1 unit as BUY.
 3. Buy Date / Sell Date - Dates with `dd-MM-yyyy` format.
 4. Buy Price / Sell Price - Effective price (post exit load, if any).
-
 
 ### Sheet 2 (Can be named as per your choice)
 
@@ -73,11 +69,11 @@ The following columns are recommended (can be in any order).
 Update the sheet name and column numbers (0 indexed) in `services/mf_properties_service.py`
 
 | Fund Name               | AMFI Code | Asset  | Portfolio | Country |
-|-------------------------|-----------|--------|-----------|---------|
+| ----------------------- | --------- | ------ | --------- | ------- |
 | UTI Nifty 50 Index Fund | 120716    | Equity | Core      | India   |
 
 1. Fund Name [Mandatory] - Name of the fund (can be any name, but has to be the same name in Sheet 1).
-2. AMFI Code [Mandatory] - Can be found [here](https://www.mfapi.in/) 
+2. AMFI Code [Mandatory] - Can be found [here](https://www.mfapi.in/)
 3. Asset [Mandatory] - Types can be `Equity`, `ELSS`, `Debt` or `Arbitrage`.
 4. Portfolio [Optional] - Which portfolio does the fund belong to (New features to be added soon).
 5. Country [Optional] - New features to be added soon.
@@ -88,17 +84,20 @@ Before you begin, ensure you have the following installed:
 
 [Python3](https://www.python.org/downloads/)
 
-Install Poetry
+Install Required Libraries
+
 ```bash
-pip install poetry
+make install
 ```
 
-Install dependencies
+Start Virtual Enviroment
+
 ```bash
-poetry install
+source bin/activate
 ```
 
 Run the project
+
 ```bash
 python3 main.py --help
 ```
@@ -126,4 +125,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-

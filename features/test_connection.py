@@ -6,6 +6,8 @@ This module contains a method which tests connection to Google Sheets.
 
 """
 
+import logging
+
 from models.mf_property import MFProperty
 from models.mf_transaction import MFTransaction
 from services.mf_data_service import MFDataService
@@ -15,17 +17,16 @@ from services.mf_properties_service import MFPropertiesService
 def test_connection():
     mf_txn_list: list[MFTransaction] = MFDataService(True).mf_txn_data()
 
-    print(f"\nFound {len(mf_txn_list)} mutual fund transactions")
-
-    print("\nPrinting first transaction...")
-    print(mf_txn_list[0])
+    logging.info("Printing first transaction...")
+    logging.info(mf_txn_list[0])
 
     mf_properties: dict[str, MFProperty] = MFPropertiesService(True).mf_properties()
 
-    print(f"\nFound {len(mf_properties)} mutual fund properties")
-
-    print("\nPrinting first property...")
+    logging.info("Printing first property...")
     key: str = next(iter(mf_properties))
-    print(key, mf_properties[key])
+    logging.info("%s: %s", key, mf_properties[key])
 
-    print("\nConnection established successfully!")
+    logging.warning("Check if all mappings are correctly done.")
+    logging.warning("If mapping is incorrect, correct .env file")
+
+    logging.info("Connection established successfully!")

@@ -12,13 +12,13 @@ from typing import Self
 class MFProperty:
     """A class representing a mutual fund property model"""
 
-    _amfi_code: str
+    _amfi_code: int
     _portfolio: str
     _asset: str
     _country: str
 
     def __init__(
-        self: Self, amfi_code: str, portfolio: str, asset: str, country: str
+        self: Self, amfi_code: int, portfolio: str, asset: str, country: str
     ) -> None:
         self._amfi_code = amfi_code
         self._portfolio = portfolio
@@ -26,11 +26,11 @@ class MFProperty:
         self._country = country
 
     @property
-    def amfi_code(self: Self) -> str:
+    def amfi_code(self: Self) -> int:
         return self._amfi_code
 
     @amfi_code.setter
-    def amfi_code(self, amfi_code: str) -> None:
+    def amfi_code(self, amfi_code: int) -> None:
         self._amfi_code = amfi_code
 
     @property
@@ -60,7 +60,7 @@ class MFProperty:
     def to_dict(self: Self) -> dict[str:str]:
         """Serialize the object to dict"""
         return {
-            "amfi_code": self._amfi_code,
+            "amfi_code": str(self._amfi_code),
             "portfolio": self._portfolio,
             "asset": self._asset,
             "country": self._country,
@@ -70,7 +70,7 @@ class MFProperty:
     def from_dict(cls, data: dict) -> "MFProperty":
         """Create a MFProperty object from a dictionary"""
         return cls(
-            amfi_code=data["amfi_code"],
+            amfi_code=int(data["amfi_code"]),
             portfolio=data["portfolio"],
             asset=data["asset"],
             country=data["country"],

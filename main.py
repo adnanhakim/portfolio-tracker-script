@@ -7,61 +7,166 @@ Run python3 main.py --help for more information.
 
 """
 
-import sys
-from argparse import ArgumentParser, Namespace
+import logging
+from argparse import ArgumentParser, ArgumentTypeError, Namespace, _SubParsersAction
+from datetime import datetime
 
-from features.mf_asset_value import calculate_monthly_asset_value
+from colorama import init
+from dotenv import load_dotenv
+
+from features.mf_monthly_asset_value import calculate_monthly_asset_value
+from features.mf_summary import calculate_portfolio_summary
 from features.test_connection import test_connection
-from utils import dates
+from utils import dates, logger
 
-last_month_datestring: str = dates.get_last_month_datestring()
+# Load environment variables
+load_dotenv()
+
+# Initialize colorama
+init()
+
+
+last_month_date: datetime = dates.get_last_month_date()
+
+
+def parse_month_year(date_string):
+    try:
+        return datetime.strptime(date_string, "%b-%Y")
+    except ValueError as exception:
+        raise ArgumentTypeError(
+            f"Not a valid date: '{date_string}'. Expected format: 'MMM-yyyy'"
+        ) from exception
+
 
 parser = ArgumentParser(
     description="A Python script that analyzes investment portfolio data from a Google Sheet"
 )
 
-parser.add_argument(
-    "command",
-    type=str,
-    help="Specify the type of analysis to be performed. Currently supporting 'test' to test your connection and 'assetvalue' to calculate month-on-month asset values.",
+subparsers: _SubParsersAction = parser.add_subparsers(
+    dest="command",
+    help="type of command to be executed",
 )
-parser.add_argument(
-    "--fromdate",
-    type=str,
-    default=last_month_datestring,
-    help="Specify the starting date of the analysis period (inclusive) in MMM-yyyy format, defaulted to last month. Example Jan-2021",
+
+parser_test: ArgumentParser = subparsers.add_parser(
+    "test", help="test connection to google sheets"
 )
-parser.add_argument(
-    "--todate",
-    type=str,
-    default=last_month_datestring,
-    help="Specify the ending date of the analysis period (inclusive) in MMM-yyyy format, defaulted to last month. Example Jan-2021",
+parser_test.add_argument(
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    help="verbose mode for detailed logging",
 )
-parser.add_argument(
+
+parser_assetvalue: ArgumentParser = subparsers.add_parser(
+    "assetvalue", help="generate month-on-month asset value"
+)
+parser_assetvalue.add_argument(
+    "-f",
+    "--from",
+    metavar="date",
+    dest="from_date",
+    type=parse_month_year,
+    default=last_month_date,
+    help="starting date in MMM-yyyy format, defaulted to last month",
+)
+parser_assetvalue.add_argument(
+    "-t",
+    "--to",
+    metavar="date",
+    dest="to_date",
+    type=parse_month_year,
+    default=last_month_date,
+    help="ending date in MMM-yyyy format, defaulted to last month",
+)
+parser_assetvalue.add_argument(
+    "-b",
     "--benchmark",
     action="store_true",
-    help="Specify this flag to compare results with benchmark values",
+    help="calculate benchmark data",
 )
-parser.add_argument(
+parser_assetvalue.add_argument(
+    "-eb",
+    "--eqbenchmark",
+    metavar="amfi_code",
+    dest="equity_benchmark",
+    type=int,
+    default=120716,
+    help="amfi code of equity benchmark mutual fund",
+)
+parser_assetvalue.add_argument(
     "--equity",
     action="store_true",
-    help="Specify this flag to calculate for only equity funds",
+    help="calculate data for only equity funds",
 )
-parser.add_argument(
+parser_assetvalue.add_argument(
     "--nocache",
+    dest="override_cache",
     action="store_true",
-    help="Specify this flag to invalidate cache and fetch latest values",
+    help="invalidate cache and fetch latest values",
+)
+parser_assetvalue.add_argument(
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    help="verbose mode for detailed logging",
 )
 
+parser_summary: ArgumentParser = subparsers.add_parser(
+    "summary", help="generate portfolio summary"
+)
+parser_summary.add_argument(
+    "-d",
+    "--date",
+    metavar="date",
+    dest="date",
+    type=parse_month_year,
+    default=last_month_date,
+    help="date in MMM-yyyy format, defaulted to last month",
+)
+parser_summary.add_argument(
+    "-p",
+    "--portfolio",
+    metavar="name",
+    dest="portfolio",
+    type=str,
+    help="filter by portfolio name",
+)
+parser_summary.add_argument(
+    "-c",
+    "--country",
+    metavar="name",
+    dest="country",
+    type=str,
+    help="filter by country name",
+)
+parser_summary.add_argument(
+    "--nocache",
+    dest="override_cache",
+    action="store_true",
+    help="invalidate cache and fetch latest values",
+)
+parser_summary.add_argument(
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    help="verbose mode for detailed logging",
+)
 
+# Get arguments
 args: Namespace = parser.parse_args()
 
-command = args.command
+# Setup logging
+logger.setup_logging(args.verbose)
 
-if command == "assetvalue":
+logging.debug("CLI Args: %s", args)
+
+if args.command == "assetvalue":
     calculate_monthly_asset_value(args)
-elif command == "test":
+elif args.command == "test":
     test_connection()
+elif args.command == "summary":
+    calculate_portfolio_summary(args)
 else:
-    print("Unsupported command. Run --help for more information.")
-    sys.exit(1)
+    raise ArgumentTypeError(
+        f"Unsupported command '{args.command}'. Run --help for more information."
+    )
