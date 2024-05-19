@@ -39,7 +39,9 @@ class MFApiClient:
         if response.status_code == 200:
             pricing_data_json = response.json()["data"]
 
-            files.save_file_as_json(self._FOLDER_NAME, amfi_code, pricing_data_json)
+            files.save_file_as_json(
+                self._FOLDER_NAME, str(amfi_code), pricing_data_json
+            )
 
             pricing_data: list[MFPrice] = [
                 MFPrice.from_dict(d) for d in pricing_data_json
